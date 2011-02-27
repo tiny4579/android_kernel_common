@@ -85,6 +85,20 @@ unsigned int __atags_pointer __initdata;
 unsigned int system_rev;
 EXPORT_SYMBOL(system_rev);
 
+#ifdef CONFIG_MICROP_COMMON
+char microp_ver[4];
+EXPORT_SYMBOL(microp_ver);
+
+unsigned int als_kadc;
+EXPORT_SYMBOL(als_kadc);
+
+unsigned int ps_kparam1;
+EXPORT_SYMBOL(ps_kparam1);
+
+unsigned int ps_kparam2;
+EXPORT_SYMBOL(ps_kparam2);
+#endif
+
 unsigned int system_serial_low;
 EXPORT_SYMBOL(system_serial_low);
 
@@ -517,25 +531,21 @@ setup_ramdisk(int doload, int prompt, int image_start, unsigned int rd_sz)
 #endif
 }
 
-static void __init
-request_standard_resources(struct meminfo *mi, struct machine_desc *mdesc)
+static void __init request_standard_resources(struct machine_desc *mdesc)
 {
+	struct memblock_region *region;
 	struct resource *res;
-	int i;
 
 	kernel_code.start   = virt_to_phys(_text);
 	kernel_code.end     = virt_to_phys(_etext - 1);
 	kernel_data.start   = virt_to_phys(_sdata);
 	kernel_data.end     = virt_to_phys(_end - 1);
 
-	for (i = 0; i < mi->nr_banks; i++) {
-		if (mi->bank[i].size == 0)
-			continue;
-
+	for_each_memblock(memory, region) {
 		res = alloc_bootmem_low(sizeof(*res));
 		res->name  = "System RAM";
-		res->start = mi->bank[i].start;
-		res->end   = mi->bank[i].start + mi->bank[i].size - 1;
+		res->start = __pfn_to_phys(memblock_region_memory_base_pfn(region));
+		res->end = __pfn_to_phys(memblock_region_memory_end_pfn(region)) - 1;
 		res->flags = IORESOURCE_MEM | IORESOURCE_BUSY;
 
 		request_resource(&iomem_resource, res);
@@ -648,6 +658,39 @@ static int __init parse_tag_revision(const struct tag *tag)
 }
 
 __tagtable(ATAG_REVISION, parse_tag_revision);
+
+#ifdef CONFIG_MICROP_COMMON
+static int __init parse_tag_microp_version(const struct tag *tag)
+{
+	int i;
+
+	for (i = 0; i < 4; i++)
+		microp_ver[i] = tag->u.microp_version.ver[i];
+
+	return 0;
+}
+
+__tagtable(ATAG_MICROP_VERSION, parse_tag_microp_version);
+
+static int __init parse_tag_als_calibration(const struct tag *tag)
+{
+	als_kadc = tag->u.als_kadc.kadc;
+
+	return 0;
+}
+
+__tagtable(ATAG_ALS, parse_tag_als_calibration);
+
+static int __init parse_tag_ps_calibration(const struct tag *tag)
+{
+	ps_kparam1 = tag->u.ps_kparam.kparam1;
+	ps_kparam2 = tag->u.ps_kparam.kparam2;
+
+	return 0;
+}
+
+__tagtable(ATAG_PS, parse_tag_ps_calibration);
+#endif
 
 #ifndef CONFIG_CMDLINE_FORCE
 static int __init parse_tag_cmdline(const struct tag *tag)
@@ -857,7 +900,7 @@ void __init setup_arch(char **cmdline_p)
 	arm_memblock_init(&meminfo, mdesc);
 
 	paging_init(mdesc);
-	request_standard_resources(&meminfo, mdesc);
+	request_standard_resources(mdesc);
 
 #ifdef CONFIG_SMP
 	if (is_smp())
