@@ -24,6 +24,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/wakelock.h>
+#include <linux/mutex.h>
 #include <mach/system.h>
 
 #define DEBUG 0
@@ -77,6 +78,7 @@ struct msm_i2c_dev {
 	void                *complete;
 	struct wake_lock    wakelock;
 	bool                is_suspended;
+	struct mutex	    mlock;
 };
 
 #if DEBUG
@@ -221,7 +223,7 @@ static void msm_i2c_interrupt_locked(struct msm_i2c_dev *dev)
 	return;
 
 out_err:
-	dev_err(dev->dev, "error, status %x (%02X)\n", status, dev->msg->addr);
+	dev_err(dev->dev, "error, status %x\n", status);
 	dev->ret = -EIO;
 out_complete:
 	complete(dev->complete);
@@ -254,7 +256,7 @@ msm_i2c_poll_notbusy(struct msm_i2c_dev *dev, int warn)
 			return 0;
 		}
 		if (retries++ > 100)
-			msleep(10);
+			usleep_range(100, 200);
 	}
 	dev_err(dev->dev, "Error waiting for notbusy (%d)\n", warn);
 	return -ETIMEDOUT;
@@ -286,9 +288,6 @@ msm_i2c_recover_bus_busy(struct msm_i2c_dev *dev)
 		       dev->base + I2C_WRITE_DATA);
 	}
 
-	gpio_request(gpio_clk, "gpio_clk");
-	gpio_request(gpio_dat, "gpio_dat");
-
 	dev_warn(dev->dev, "i2c_scl: %d, i2c_sda: %d\n",
 		 gpio_get_value(gpio_clk), gpio_get_value(gpio_dat));
 
@@ -302,7 +301,7 @@ msm_i2c_recover_bus_busy(struct msm_i2c_dev *dev)
 		gpio_direction_input(gpio_clk);
 		udelay(5);
 		if (!gpio_get_value(gpio_clk))
-			udelay(20);
+			usleep_range(20, 30);
 		if (!gpio_get_value(gpio_clk))
 			msleep(10);
 		gpio_clk_status = gpio_get_value(gpio_clk);
@@ -338,6 +337,7 @@ msm_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	if (WARN_ON(!num))
 		return -EINVAL;
 
+	mutex_lock(&dev->mlock);
 	/*
 	 * If there is an i2c_xfer after driver has been suspended,
 	 * grab wakelock to abort suspend.
@@ -349,7 +349,6 @@ msm_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	ret = msm_i2c_poll_notbusy(dev, 1);
 	if (ret) {
-		dev_err(dev->dev, "Still busy in starting xfer(%02X)\n", msgs->addr);
 		ret = msm_i2c_recover_bus_busy(dev);
 		if (ret)
 			goto err;
@@ -378,9 +377,7 @@ msm_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	 */
 
 	timeout = wait_for_completion_timeout(&complete, HZ);
-	if (msm_i2c_poll_notbusy(dev, 0)) /* Read may not have stopped in time */
-		dev_err(dev->dev, "Still busy after xfer completion (%02X)\n",
-			msgs->addr);
+	msm_i2c_poll_notbusy(dev, 0); /* Read may not have stopped in time */
 
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->flush_cnt) {
@@ -403,7 +400,8 @@ msm_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	}
 
 	if (ret < 0) {
-		dev_err(dev->dev, "Error during data xfer (%d) @%02X\n", ret, msgs->addr);
+		dev_err(dev->dev, "Error during data xfer %x (%d)\n",
+			msgs[0].addr, ret);
 		msm_i2c_recover_bus_busy(dev);
 	}
 err:
@@ -411,7 +409,7 @@ err:
 	clk_disable(dev->clk);
 	if (dev->is_suspended)
 		wake_unlock(&dev->wakelock);
-
+	mutex_unlock(&dev->mlock);
 	return ret;
 }
 
@@ -481,6 +479,7 @@ msm_i2c_probe(struct platform_device *pdev)
 		goto err_ioremap_failed;
 	}
 
+	mutex_init(&dev->mlock);
 	spin_lock_init(&dev->lock);
 	wake_lock_init(&dev->wakelock, WAKE_LOCK_SUSPEND, "i2c");
 	platform_set_drvdata(pdev, dev);
@@ -545,6 +544,10 @@ msm_i2c_remove(struct platform_device *pdev)
 	struct msm_i2c_dev	*dev = platform_get_drvdata(pdev);
 	struct resource		*mem;
 
+	mutex_lock(&dev->mlock);
+	dev->is_suspended = true;
+	mutex_unlock(&dev->mlock);
+	mutex_destroy(&dev->mlock);
 	platform_set_drvdata(pdev, NULL);
 	enable_irq(dev->irq);
 	free_irq(dev->irq, dev);
@@ -563,10 +566,12 @@ static int msm_i2c_suspend_noirq(struct device *device)
 	struct platform_device *pdev = to_platform_device(device);
 	struct msm_i2c_dev *dev = platform_get_drvdata(pdev);
 
-	/* Block to allow any i2c_xfers to finish */
-	i2c_lock_adapter(&dev->adapter);
-	dev->is_suspended = true;
-	i2c_unlock_adapter(&dev->adapter);
+	if (dev) {
+		/* Block to allow any i2c_xfers to finish */
+		i2c_lock_adapter(&dev->adapter);
+		dev->is_suspended = true;
+		i2c_unlock_adapter(&dev->adapter);
+	}
 	return 0;
 }
 
@@ -574,10 +579,12 @@ static int msm_i2c_resume_noirq(struct device *device) {
 	struct platform_device *pdev = to_platform_device(device);
 	struct msm_i2c_dev *dev = platform_get_drvdata(pdev);
 
-	/* Block to allow any i2c_xfers to finish */
-	i2c_lock_adapter(&dev->adapter);
-	dev->is_suspended = false;
-	i2c_unlock_adapter(&dev->adapter);
+	if (dev) {
+		/* Block to allow any i2c_xfers to finish */
+		i2c_lock_adapter(&dev->adapter);
+		dev->is_suspended = false;
+		i2c_unlock_adapter(&dev->adapter);
+	}
 	return 0;
 }
 
