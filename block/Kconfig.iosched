@@ -43,6 +43,7 @@ config CFQ_GROUP_IOSCHED
 	---help---
 	  Enable group IO scheduling in CFQ.
 
+<<<<<<< HEAD
 config IOSCHED_BFQ
 	tristate "BFQ I/O scheduler"
 	depends on EXPERIMENTAL
@@ -73,6 +74,8 @@ config IOSCHED_VR
 	  for switching head direction.
 
 
+=======
+>>>>>>> parent of 578962b... BFQ I/O scheduler
 choice
 	prompt "Default I/O scheduler"
 	default DEFAULT_CFQ
@@ -86,12 +89,15 @@ choice
 	config DEFAULT_CFQ
 		bool "CFQ" if IOSCHED_CFQ=y
 
+<<<<<<< HEAD
 	config DEFAULT_BFQ
 		bool "BFQ" if IOSCHED_BFQ=y
 
 	config DEFAULT_VR
 		bool "V(R)" if IOSCHED_VR=y
 
+=======
+>>>>>>> parent of 578962b... BFQ I/O scheduler
 	config DEFAULT_NOOP
 		bool "No-op"
 
@@ -101,8 +107,11 @@ config DEFAULT_IOSCHED
 	string
 	default "deadline" if DEFAULT_DEADLINE
 	default "cfq" if DEFAULT_CFQ
+<<<<<<< HEAD
 	default "bfq" if DEFAULT_BFQ
 	default "vr" if DEFAULT_VR
+=======
+>>>>>>> parent of 578962b... BFQ I/O scheduler
 	default "noop" if DEFAULT_NOOP
 
 endmenu
