@@ -85,15 +85,12 @@ choice
 	config DEFAULT_CFQ
 		bool "CFQ" if IOSCHED_CFQ=y
 
-<<<<<<< HEAD
 	config DEFAULT_BFQ
 		bool "BFQ" if IOSCHED_BFQ=y
 
 	config DEFAULT_VR
 		bool "V(R)" if IOSCHED_VR=y
 
-=======
->>>>>>> parent of 578962b... BFQ I/O scheduler
 	config DEFAULT_NOOP
 		bool "No-op"
 
@@ -103,11 +100,8 @@ config DEFAULT_IOSCHED
 	string
 	default "deadline" if DEFAULT_DEADLINE
 	default "cfq" if DEFAULT_CFQ
-<<<<<<< HEAD
 	default "bfq" if DEFAULT_BFQ
 	default "vr" if DEFAULT_VR
-=======
->>>>>>> parent of 578962b... BFQ I/O scheduler
 	default "noop" if DEFAULT_NOOP
 
 endmenu
