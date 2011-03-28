@@ -921,6 +921,21 @@ struct clk msm_clocks_8x50[] = {
 
 };
 
+/* G-Sensor calibration value */
+#define ATAG_GS         0x5441001d
+
+unsigned int gs_kvalue;
+EXPORT_SYMBOL(gs_kvalue);
+
+static int __init parse_tag_gs_calibration(const struct tag *tag)
+{
+	gs_kvalue = tag->u.revision.rev;
+	printk(KERN_DEBUG "%s: gs_kvalue = 0x%x\n", __func__, gs_kvalue);
+	return 0;
+}
+
+__tagtable(ATAG_GS, parse_tag_gs_calibration);
+
 void msm_i2c_gpio_init(void)
 {
         gpio_request(GPIO_I2C_CLK, "i2c_clk");
