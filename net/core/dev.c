@@ -132,6 +132,7 @@
 #include <trace/events/skb.h>
 #include <linux/pci.h>
 #include <linux/inetdevice.h>
+#include <linux/iface_stat.h>
 
 #include "net-sysfs.h"
 
@@ -4908,6 +4909,9 @@ static void rollback_registered_many(struct list_head *head)
 	synchronize_net();
 
 	list_for_each_entry(dev, head, unreg_list) {
+		/* Store stats for this device in persistent iface_stat */
+		iface_stat_update(dev);
+
 		/* Shutdown queueing discipline. */
 		dev_shutdown(dev);
 
