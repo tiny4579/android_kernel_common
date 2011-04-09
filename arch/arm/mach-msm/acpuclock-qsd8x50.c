@@ -556,25 +556,23 @@ uint32_t acpuclk_get_switch_time(void)
 unsigned long acpuclk_power_collapse(int from_idle)
 {
 	int ret = acpuclk_get_rate();
-  enum setrate_reason reason = (from_idle) ? SETRATE_PC_IDLE : SETRATE_PC;
-	ret *= 1000;
+	enum setrate_reason reason = (from_idle) ? SETRATE_PC_IDLE : SETRATE_PC;
 	if (ret > drv_state.power_collapse_khz)
-		acpuclk_set_rate(drv_state.power_collapse_khz, reason);
-	return ret;
+		acpuclk_set_rate(drv_state.power_collapse_khz * 1000, reason);
+	return ret * 1000;
 }
 
 unsigned long acpuclk_get_wfi_rate(void)
 {
-	return drv_state.wait_for_irq_khz;
+	return drv_state.wait_for_irq_khz * 1000;
 }
 
 unsigned long acpuclk_wait_for_irq(void)
 {
 	int ret = acpuclk_get_rate();
-	ret *= 1000;
 	if (ret > drv_state.wait_for_irq_khz)
-		acpuclk_set_rate(drv_state.wait_for_irq_khz, 1);
-	return ret;
+		acpuclk_set_rate(drv_state.wait_for_irq_khz * 1000, SETRATE_SWFI);
+	return ret * 1000;
 }
 
 #ifdef CONFIG_MSM_CPU_AVS
