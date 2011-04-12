@@ -88,7 +88,7 @@ static unsigned int sleep_max_freq;
  * When sleep_max_freq=0 this will have no effect.
  */
 //#define DEFAULT_SLEEP_WAKEUP_FREQ CONFIG_MSM_CPU_FREQ_ONDEMAND_MAX
-#define DEFAULT_SLEEP_WAKEUP_FREQ 768000
+#define DEFAULT_SLEEP_WAKEUP_FREQ 998000
 static unsigned int sleep_wakeup_freq;
 
 /*
@@ -109,7 +109,7 @@ static unsigned int sample_rate_jiffies;
  * Freqeuncy delta when ramping up.
  * zero disables causes to always jump straight to max frequency.
  */
-#define DEFAULT_RAMP_UP_STEP 245000
+#define DEFAULT_RAMP_UP_STEP 384000
 static unsigned int ramp_up_step;
 
 /*
