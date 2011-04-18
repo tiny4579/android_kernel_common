@@ -149,10 +149,12 @@ static void smartass_update_min_max(struct smartass_info_s *this_smartass, struc
                 this_smartass->min_speed = policy->min;
                 this_smartass->max_speed = // sleep_max_freq; but make sure it obeys the policy min/max
                         policy->max > sleep_max_freq ? (sleep_max_freq > policy->min ? sleep_max_freq : policy->min) : policy->max;
+//	 printk(KERN_INFO "CPU policy max set to %u\n",this_smartass->max_speed);
         } else {
                 this_smartass->min_speed = // awake_min_freq; but make sure it obeys the policy min/max
                         policy->min < awake_min_freq ? (awake_min_freq < policy->max ? awake_min_freq : policy->max) : policy->min;
                 this_smartass->max_speed = policy->max;
+//	printk(KERN_INFO "CPU policy max set to %u\n",this_smartass->max_speed);
         }
 }
 
@@ -611,6 +613,8 @@ static void smartass_late_resume(struct early_suspend *handler) {
 static struct early_suspend smartass_power_suspend = {
         .suspend = smartass_early_suspend,
         .resume = smartass_late_resume,
+// The sleep policy should be the last thing set during suspend and the first thing removed on resume
+	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 5,
 };
 
 static int __init cpufreq_smartass_init(void)
