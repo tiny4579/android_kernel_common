@@ -75,6 +75,7 @@ static void ext4_write_super(struct super_block *sb);
 static int ext4_freeze(struct super_block *sb);
 static struct dentry *ext4_mount(struct file_system_type *fs_type, int flags,
 		       const char *dev_name, void *data);
+static int ext4_feature_set_ok(struct super_block *sb, int readonly);
 static void ext4_destroy_lazyinit_thread(void);
 static void ext4_unregister_li_request(struct super_block *sb);
 static void ext4_clear_request_list(void);
@@ -2120,6 +2121,13 @@ static void ext4_orphan_cleanup(struct super_block *sb,
 		return;
 	}
 
+	/* Check if feature set would not allow a r/w mount */
+	if (!ext4_feature_set_ok(sb, 0)) {
+		ext4_msg(sb, KERN_INFO, "Skipping orphan cleanup due to "
+			 "unknown ROCOMPAT features");
+		return;
+	}
+
 	if (EXT4_SB(sb)->s_mount_state & EXT4_ERROR_FS) {
 		if (es->s_last_orphan)
 			jbd_debug(1, "Errors on filesystem, "
@@ -2637,12 +2645,6 @@ static void print_daily_error_info(unsigned long arg)
 	mod_timer(&sbi->s_err_report, jiffies + 24*60*60*HZ);  /* Once a day */
 }
 
-static void ext4_lazyinode_timeout(unsigned long data)
-{
-	struct task_struct *p = (struct task_struct *)data;
-	wake_up_process(p);
-}
-
 /* Find next suitable group and run ext4_init_inode_table */
 static int ext4_run_li_request(struct ext4_li_request *elr)
 {
@@ -2690,7 +2692,7 @@ static int ext4_run_li_request(struct ext4_li_request *elr)
 
 /*
  * Remove lr_request from the list_request and free the
- * request tructure. Should be called with li_list_mtx held
+ * request structure. Should be called with li_list_mtx held
  */
 static void ext4_remove_li_request(struct ext4_li_request *elr)
 {
@@ -2708,14 +2710,16 @@ static void ext4_remove_li_request(struct ext4_li_request *elr)
 
 static void ext4_unregister_li_request(struct super_block *sb)
 {
-	struct ext4_li_request *elr = EXT4_SB(sb)->s_li_request;
-
-	if (!ext4_li_info)
+	mutex_lock(&ext4_li_mtx);
+	if (!ext4_li_info) {
+		mutex_unlock(&ext4_li_mtx);
 		return;
+	}
 
 	mutex_lock(&ext4_li_info->li_list_mtx);
-	ext4_remove_li_request(elr);
+	ext4_remove_li_request(EXT4_SB(sb)->s_li_request);
 	mutex_unlock(&ext4_li_info->li_list_mtx);
+	mutex_unlock(&ext4_li_mtx);
 }
 
 static struct task_struct *ext4_lazyinit_task;
@@ -2734,13 +2738,9 @@ static int ext4_lazyinit_thread(void *arg)
 	struct ext4_lazy_init *eli = (struct ext4_lazy_init *)arg;
 	struct list_head *pos, *n;
 	struct ext4_li_request *elr;
-	unsigned long next_wakeup;
-	DEFINE_WAIT(wait);
+	unsigned long next_wakeup, cur;
 
 	BUG_ON(NULL == eli);
-
-	eli->li_timer.data = (unsigned long)current;
-	eli->li_timer.function = ext4_lazyinode_timeout;
 
 	eli->li_task = current;
 	wake_up(&eli->li_wait_task);
@@ -2775,19 +2775,15 @@ cont_thread:
 		if (freezing(current))
 			refrigerator();
 
-		if ((time_after_eq(jiffies, next_wakeup)) ||
+		cur = jiffies;
+		if ((time_after_eq(cur, next_wakeup)) ||
 		    (MAX_JIFFY_OFFSET == next_wakeup)) {
 			cond_resched();
 			continue;
 		}
 
-		eli->li_timer.expires = next_wakeup;
-		add_timer(&eli->li_timer);
-		prepare_to_wait(&eli->li_wait_daemon, &wait,
-				TASK_INTERRUPTIBLE);
-		if (time_before(jiffies, next_wakeup))
-			schedule();
-		finish_wait(&eli->li_wait_daemon, &wait);
+		schedule_timeout_interruptible(next_wakeup - cur);
+
 		if (kthread_should_stop()) {
 			ext4_clear_request_list();
 			goto exit_thread;
@@ -2811,12 +2807,10 @@ exit_thread:
 		goto cont_thread;
 	}
 	mutex_unlock(&eli->li_list_mtx);
-	del_timer_sync(&ext4_li_info->li_timer);
 	eli->li_task = NULL;
 	wake_up(&eli->li_wait_task);
 
 	kfree(ext4_li_info);
-	ext4_lazyinit_task = NULL;
 	ext4_li_info = NULL;
 	mutex_unlock(&ext4_li_mtx);
 
@@ -2844,7 +2838,6 @@ static int ext4_run_lazyinit_thread(void)
 	if (IS_ERR(ext4_lazyinit_task)) {
 		int err = PTR_ERR(ext4_lazyinit_task);
 		ext4_clear_request_list();
-		del_timer_sync(&ext4_li_info->li_timer);
 		kfree(ext4_li_info);
 		ext4_li_info = NULL;
 		printk(KERN_CRIT "EXT4: error %d creating inode table "
@@ -2893,9 +2886,7 @@ static int ext4_li_info_new(void)
 	INIT_LIST_HEAD(&eli->li_request_list);
 	mutex_init(&eli->li_list_mtx);
 
-	init_waitqueue_head(&eli->li_wait_daemon);
 	init_waitqueue_head(&eli->li_wait_task);
-	init_timer(&eli->li_timer);
 	eli->li_state |= EXT4_LAZYINIT_QUIT;
 
 	ext4_li_info = eli;
@@ -2970,6 +2961,12 @@ static int ext4_register_li_request(struct super_block *sb,
 	mutex_unlock(&ext4_li_info->li_list_mtx);
 
 	sbi->s_li_request = elr;
+	/*
+	 * set elr to NULL here since it has been inserted to
+	 * the request_list and the removal and free of it is
+	 * handled by ext4_clear_request_list from now on.
+	 */
+	elr = NULL;
 
 	if (!(ext4_li_info->li_state & EXT4_LAZYINIT_RUNNING)) {
 		ret = ext4_run_lazyinit_thread();

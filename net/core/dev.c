@@ -1006,7 +1006,7 @@ rollback:
 	}
 
 	write_lock_bh(&dev_base_lock);
-	hlist_del(&dev->name_hlist);
+	hlist_del_rcu(&dev->name_hlist);
 	write_unlock_bh(&dev_base_lock);
 
 	synchronize_rcu();
@@ -1332,11 +1332,13 @@ int dev_close_many(struct list_head *head)
  */
 int dev_close(struct net_device *dev)
 {
-	LIST_HEAD(single);
+	if (dev->flags & IFF_UP) {
+		LIST_HEAD(single);
 
-	list_add(&dev->unreg_list, &single);
-	dev_close_many(&single);
-	list_del(&single);
+		list_add(&dev->unreg_list, &single);
+		dev_close_many(&single);
+		list_del(&single);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(dev_close);
