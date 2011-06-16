@@ -1191,17 +1191,13 @@ static irqreturn_t imx_udc_ctrl_irq(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
-#ifndef MX1_INT_USBD0
-#define MX1_INT_USBD0 MX1_USBD_INT0
-#endif
-
 static irqreturn_t imx_udc_bulk_irq(int irq, void *dev)
 {
 	struct imx_udc_struct *imx_usb = dev;
-	struct imx_ep_struct *imx_ep = &imx_usb->imx_ep[irq - MX1_INT_USBD0];
+	struct imx_ep_struct *imx_ep = &imx_usb->imx_ep[irq - USBD_INT0];
 	int intr = __raw_readl(imx_usb->base + USB_EP_INTR(EP_NO(imx_ep)));
 
-	dump_ep_intr(__func__, irq - MX1_INT_USBD0, intr, imx_usb->dev);
+	dump_ep_intr(__func__, irq - USBD_INT0, intr, imx_usb->dev);
 
 	if (!imx_usb->driver) {
 		__raw_writel(intr, imx_usb->base + USB_EP_INTR(EP_NO(imx_ep)));
@@ -1320,7 +1316,7 @@ static struct imx_udc_struct controller = {
 };
 
 /*******************************************************************************
- * USB gadget driver functions
+ * USB gadged driver functions
  *******************************************************************************
  */
 int usb_gadget_probe_driver(struct usb_gadget_driver *driver,

@@ -338,19 +338,6 @@ config USB_S3C2410_DEBUG
 	boolean "S3C2410 udc debug messages"
 	depends on USB_GADGET_S3C2410
 
-config USB_GADGET_PXA_U2O
-	boolean "PXA9xx Processor USB2.0 controller"
-	select USB_GADGET_DUALSPEED
-	help
-	  PXA9xx Processor series include a high speed USB2.0 device
-	  controller, which support high speed and full speed USB peripheral.
-
-config USB_PXA_U2O
-	tristate
-	depends on USB_GADGET_PXA_U2O
-	default USB_GADGET
-	select USB_GADGET_SELECTED
-
 #
 # Controllers available in both integrated and discrete versions
 #
@@ -427,8 +414,8 @@ config USB_FSL_QE
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
-config USB_GADGET_CI13XXX_PCI
-	boolean "MIPS USB CI13xxx PCI UDC"
+config USB_GADGET_CI13XXX
+	boolean "MIPS USB CI13xxx"
 	depends on PCI
 	select USB_GADGET_DUALSPEED
 	help
@@ -439,9 +426,9 @@ config USB_GADGET_CI13XXX_PCI
 	  dynamically linked module called "ci13xxx_udc" and force all
 	  gadget drivers to also be dynamically linked.
 
-config USB_CI13XXX_PCI
+config USB_CI13XXX
 	tristate
-	depends on USB_GADGET_CI13XXX_PCI
+	depends on USB_GADGET_CI13XXX
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
@@ -508,60 +495,32 @@ config USB_LANGWELL
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
-config USB_GADGET_EG20T
-	boolean "Intel EG20T PCH/OKI SEMICONDUCTOR ML7213 IOH UDC"
-	depends on PCI
-	select USB_GADGET_DUALSPEED
-	help
-	  This is a USB device driver for EG20T PCH.
-	  EG20T PCH is the platform controller hub that is used in Intel's
-	  general embedded platform. EG20T PCH has USB device interface.
-	  Using this interface, it is able to access system devices connected
-	  to USB device.
-	  This driver enables USB device function.
-	  USB device is a USB peripheral controller which
-	  supports both full and high speed USB 2.0 data transfers.
-	  This driver supports both control transfer and bulk transfer modes.
-	  This driver dose not support interrupt transfer or isochronous
-	  transfer modes.
-
-	  This driver also can be used for OKI SEMICONDUCTOR's ML7213 which is
-	  for IVI(In-Vehicle Infotainment) use.
-	  ML7213 is companion chip for Intel Atom E6xx series.
-	  ML7213 is completely compatible for Intel EG20T PCH.
-
-config USB_EG20T
-	tristate
-	depends on USB_GADGET_EG20T
-	default USB_GADGET
-	select USB_GADGET_SELECTED
-
-config USB_GADGET_CI13XXX_MSM
-	boolean "MIPS USB CI13xxx for MSM"
-	depends on ARCH_MSM
-	select USB_GADGET_DUALSPEED
-	select USB_MSM_OTG_72K
-	help
-	  MSM SoC has chipidea USB controller.  This driver uses
-	  ci13xxx_udc core.
-	  This driver depends on OTG driver for PHY initialization,
-	  clock management, powering up VBUS, and power management.
-	  This driver is not supported on boards like trout which
-	  has an external PHY.
-
-	  Say "y" to link the driver statically, or "m" to build a
-	  dynamically linked module called "ci13xxx_msm" and force all
-	  gadget drivers to also be dynamically linked.
-
-config USB_CI13XXX_MSM
-	tristate
-	depends on USB_GADGET_CI13XXX_MSM
-	default USB_GADGET
-	select USB_GADGET_SELECTED
 
 #
 # LAST -- dummy/emulated controller
 #
+
+config USB_GADGET_MSM_72K
+	boolean "MSM 72K Device Controller"
+	depends on ARCH_MSM
+	select USB_GADGET_SELECTED
+	select USB_GADGET_DUALSPEED
+	help
+	   USB gadget driver for Qualcomm MSM 72K architecture.
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "msm72k" and force all
+	   gadget drivers to also be dynamically linked.
+
+config USB_MSM_72K
+	tristate
+	depends on USB_GADGET_MSM_72K
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
+config USB_MSM_72K_HTC
+	boolean "Use HTC driver variant"
+	depends on USB_MSM_72K
 
 config USB_GADGET_DUMMY_HCD
 	boolean "Dummy HCD (DEVELOPMENT)"
@@ -748,19 +707,6 @@ config USB_ETH_EEM
          If you say "y" here, the Ethernet gadget driver will use the EEM
          protocol rather than ECM.  If unsure, say "n".
 
-config USB_G_NCM
-	tristate "Network Control Model (NCM) support"
-	depends on NET
-	select CRC32
-	help
-	  This driver implements USB CDC NCM subclass standard. NCM is
-	  an advanced protocol for Ethernet encapsulation, allows grouping
-	  of several ethernet frames into one USB transfer and diffferent
-	  alignment possibilities.
-
-	  Say "y" to link the driver statically, or "m" to build a
-	  dynamically linked module called "g_ncm".
-
 config USB_GADGETFS
 	tristate "Gadget Filesystem (EXPERIMENTAL)"
 	depends on EXPERIMENTAL
@@ -923,6 +869,12 @@ config USB_ANDROID_ADB
 	help
 	  Provides adb function for android gadget driver.
 
+config USB_ANDROID_DIAG
+	boolean "USB MSM7K Diag Function"
+	depends on USB_ANDROID
+	help
+	  Qualcomm diagnostics interface support.
+
 config USB_ANDROID_MASS_STORAGE
 	boolean "Android gadget mass storage function"
 	depends on USB_ANDROID && SWITCH
@@ -950,6 +902,12 @@ config USB_ANDROID_RNDIS_WCEIS
 
          If you enable this option, the device is no longer CDC ethernet
          compatible.
+
+config USB_ANDROID_ACCESSORY
+	boolean "Android USB accessory function"
+	depends on USB_ANDROID
+	help
+	  Provides Android USB Accessory support for android gadget driver.
 
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
@@ -1071,5 +1029,29 @@ config USB_G_WEBCAM
 	  dynamically linked module called "g_webcam".
 
 endchoice
+
+if USB_MSM_72K_HTC
+
+config USB_ACCESSORY_DETECT
+        boolean "USB ACCESSORY DETECT"
+        depends on USB_ANDROID
+        default n
+
+config USB_ACCESSORY_DETECT_BY_ADC
+        boolean "DETECT USB ACCESSORY BY PMIC ADC"
+        depends on USB_ANDROID && USB_ACCESSORY_DETECT
+        default n
+
+config DOCK_ACCESSORY_DETECT
+        boolean "DOCK ACCESSORY DETECT"
+        depends on USB_ANDROID
+        default n
+
+config USB_BYPASS_VBUS_NOTIFY
+        boolean "USB BYPASS VBUS NOTIFY"
+        depends on USB_ANDROID
+        default n
+
+endif # USB_MSM_72K_HTC
 
 endif # USB_GADGET
