@@ -208,7 +208,9 @@ extern int net_os_wake_lock_timeout_enable(struct net_device *dev);
 extern int net_os_set_suspend_disable(struct net_device *dev, int val);
 extern int net_os_set_suspend(struct net_device *dev, int val);
 extern int net_os_set_dtim_skip(struct net_device *dev, int val);
-extern void dhd_bus_country_set(struct net_device *dev, char *country_code);
+extern int net_os_set_packet_filter(struct net_device *dev, int val);
+extern void get_customized_country_code(char *country_iso_code, wl_country_t *cspec);
+extern void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec);
 extern char *dhd_bus_country_get(struct net_device *dev);
 extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
 
