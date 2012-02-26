@@ -82,10 +82,6 @@ struct dbgln {
 
 #define NDBGLNS 256
 
-<<<<<<< HEAD
-static unsigned int freq_threshold = 1800000;
-static unsigned int resume_speed = 1408000;
-=======
 static struct dbgln dbgbuf[NDBGLNS];
 static int dbgbufs;
 static int dbgbufe;
@@ -157,7 +153,6 @@ static int dbg_proc_read(char *buffer, char **start, off_t offset,
 #else
 #define dbgpr(...) do {} while (0)
 #endif
->>>>>>> f4a370e... cpufreq: rename cpufreq_interactive to cpufreq_interactiveX and add back
 
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		unsigned int event);
@@ -222,32 +217,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	delta_time = (unsigned int) cputime64_sub(pcpu->timer_run_time,
 						  idle_exit_time);
 
-<<<<<<< HEAD
-	delta_idle = cputime64_sub(now_idle, *cpu_time_in_idle);
-
-	/* Scale up if there were no idle cycles since coming out of idle */
-	if (delta_idle == 0) {
-		if (policy->cur == policy->max)
-			return;
-
-		if (nr_running() < 1)
-			return;
-
-		// imoseyon - when over 1.8Ghz jump less
-		if (policy->max > freq_threshold) {
-			if (samples > 0) {
-			  target_freq = policy->max;
-			  samples = 0;
-			} else { 
-			  samples++;
-			  target_freq = freq_threshold;
-			}  
-		} else target_freq = policy->max;
-
-		cpumask_set_cpu(data, &work_cpumask);
-		queue_work(up_wq, &freq_scale_work);
-		return;
-=======
 	/*
 	 * If timer ran less than 1ms after short-term sample started, retry.
 	 */
@@ -255,7 +224,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 		dbgpr("timer %d: time delta %u too short exit=%llu now=%llu\n", (int) data,
 		      delta_time, idle_exit_time, pcpu->timer_run_time);
 		goto rearm;
->>>>>>> f4a370e... cpufreq: rename cpufreq_interactive to cpufreq_interactiveX and add back
 	}
 
 	if (delta_idle > delta_time)
@@ -687,11 +655,6 @@ static int __init cpufreq_interactive_init(void)
 		pcpu->cpu_timer.data = i;
 	}
 
-<<<<<<< HEAD
-	/* Scale up is high priority */
-	up_wq = alloc_workqueue("ksmartass_up", WQ_HIGHPRI, 1);
-        down_wq = alloc_workqueue("ksmartass_down", 0, 1);
-=======
 	up_task = kthread_create(cpufreq_interactive_up_task, NULL,
 				 "kinteractiveup");
 	if (IS_ERR(up_task))
@@ -702,8 +665,7 @@ static int __init cpufreq_interactive_init(void)
 
 	/* No rescuer thread, bind to CPU queuing the work for possibly
 	   warm cache (probably doesn't matter much). */
-	down_wq = create_workqueue("knteractive_down");
->>>>>>> f4a370e... cpufreq: rename cpufreq_interactive to cpufreq_interactiveX and add back
+	down_wq = alloc_workqueue("knteractive_down", 0, 1);
 
 	if (! down_wq)
 		goto err_freeuptask;
