@@ -39,6 +39,11 @@ extern void start_drawing_late_resume(struct early_suspend *h);
 static void msmfb_resume_handler(struct early_suspend *h);
 static void msmfb_resume(struct work_struct *work);
 
+#ifdef CONFIG_MSM_HDMI
+void hdmi_DoBlit(int offset);
+int hdmi_usePanelSync(void);
+#endif
+
 #define MSMFB_DEBUG 1
 #ifdef CONFIG_FB_MSM_LOGO
 #define INIT_IMAGE_FILE "/logo.rle"
@@ -98,13 +103,13 @@ struct msmfb_info {
 		int ebottom; /* exclusive */
 	} update_info;
 	char *black;
-
-	struct early_suspend earlier_suspend;
-	struct early_suspend early_suspend;
 #ifdef CONFIG_HTC_ONMODE_CHARGING
 	struct early_suspend onchg_earlier_suspend;
 	struct early_suspend onchg_suspend;
 #endif
+	struct early_suspend earlier_suspend;
+	struct early_suspend early_suspend;
+
 	struct wake_lock idle_lock;
 	spinlock_t update_lock;
 	struct mutex panel_init_lock;
@@ -189,6 +194,7 @@ static void msmfb_handle_dma_interrupt(struct msmfb_callback *callback)
 
 	spin_lock_irqsave(&msmfb->update_lock, irq_flags);
 	msmfb->frame_done = msmfb->frame_requested;
+
 	if (msmfb->sleeping == UPDATING &&
 	    msmfb->frame_done == msmfb->update_frame) {
 		DLOG(SUSPEND_RESUME, "full update completed\n");
@@ -309,9 +315,6 @@ static void msmfb_pan_update(struct fb_info *info, uint32_t left, uint32_t top,
 	DLOG(SHOW_UPDATES, "update %d %d %d %d %d %d\n",
 		left, top, eright, ebottom, yoffset, pan_display);
 
-        if (msmfb->sleeping != AWAKE)
-                DLOG(SUSPEND_RESUME, "pan_update in state(%d)\n", msmfb->sleeping);
-
 #ifdef CONFIG_PANEL_SELF_REFRESH
 	if (lcdc->mdp->mdp_dev.overrides & MSM_MDP_RGB_PANEL_SELE_REFRESH) {
 		spin_lock_irqsave(&panel_icm->lock, irq_flags);
@@ -325,6 +328,8 @@ static void msmfb_pan_update(struct fb_info *info, uint32_t left, uint32_t top,
 	/* Jay, 8/1/09' */
 	msmfb_set_var(msmfb->fb->screen_base, yoffset);
 #endif
+        if (msmfb->sleeping != AWAKE)
+                DLOG(SUSPEND_RESUME, "pan_update in state(%d)\n", msmfb->sleeping);
 
 restart:
 	spin_lock_irqsave(&msmfb->update_lock, irq_flags);
@@ -342,8 +347,8 @@ restart:
 
 	sleeping = msmfb->sleeping;
 	/* on a full update, if the last frame has not completed, wait for it */
-	if ((pan_display && msmfb->frame_requested != msmfb->frame_done) ||
-			    sleeping == UPDATING) {
+	if (pan_display && (msmfb->frame_requested != msmfb->frame_done ||
+			    sleeping == UPDATING)) {
 		int ret;
 		spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 		ret = wait_event_interruptible_timeout(msmfb->frame_wq,
@@ -416,19 +421,35 @@ restart:
 		msmfb->yoffset);
 	spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 
-	/* if the panel is all the way on wait for vsync, otherwise sleep
-	 * for 16 ms (long enough for the dma to panel) and then begin dma */
-	msmfb->vsync_request_time = ktime_get();
-	if (panel->request_vsync && (sleeping == AWAKE)) {
-		wake_lock_timeout(&msmfb->idle_lock, HZ/4);
-		panel->request_vsync(panel, &msmfb->vsync_callback);
-	} else {
-		if (!hrtimer_active(&msmfb->fake_vsync)) {
-			hrtimer_start(&msmfb->fake_vsync,
-				      ktime_set(0, NSEC_PER_SEC/60),
-				      HRTIMER_MODE_REL);
-		}
-	}
+#ifdef CONFIG_MSM_HDMI
+    if (!hdmi_usePanelSync())
+    {
+        msmfb->vsync_request_time = ktime_get();
+        msmfb_start_dma(msmfb);
+    }
+    else
+    {
+#endif
+        /* if the panel is all the way on wait for vsync, otherwise sleep
+         * for 16 ms (long enough for the dma to panel) and then begin dma */
+        msmfb->vsync_request_time = ktime_get();
+        if (panel->request_vsync && (sleeping == AWAKE)) {
+            wake_lock_timeout(&msmfb->idle_lock, HZ/4);
+            panel->request_vsync(panel, &msmfb->vsync_callback);
+        } else {
+            if (!hrtimer_active(&msmfb->fake_vsync)) {
+                hrtimer_start(&msmfb->fake_vsync,
+                          ktime_set(0, NSEC_PER_SEC/60),
+                          HRTIMER_MODE_REL);
+            }
+        }
+#ifdef CONFIG_MSM_HDMI
+    }
+
+    /* We did the DMA, now blit the data to the other display */
+    hdmi_DoBlit(msmfb->xres * msmfb->yoffset * BYTES_PER_PIXEL(msmfb));
+#endif
+    return;
 }
 
 static void msmfb_update(struct fb_info *info, uint32_t left, uint32_t top,
@@ -462,34 +483,33 @@ error:
 	mutex_unlock(&msmfb->panel_init_lock);
 }
 
-static BLOCKING_NOTIFIER_HEAD(display_chain_head);                               
-int register_display_notifier(struct notifier_block *nb)                  
-{                                                                                
-	return blocking_notifier_chain_register(&display_chain_head, nb);        
-}                                                                                
-static int display_notifier_callback(struct notifier_block *nfb,                 
-		unsigned long action,                       
-		void *ignored)                              
-{                                                                                
+static BLOCKING_NOTIFIER_HEAD(display_chain_head);
+int register_display_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&display_chain_head, nb);
+}
+static int display_notifier_callback(struct notifier_block *nfb,
+	  unsigned long action,
+	  void *ignored)
+{
 	//struct msmfb_info *msm_fb = (struct msmfb_info *)ignored;
-	
+
 	switch (action) {
 	case NOTIFY_MSM_FB:
-		printk(KERN_DEBUG "NOTIFY_MSM_FB\n");
-		//msmfb_resume(&msm_fb->early_suspend);
-		break;
+	  printk(KERN_DEBUG "NOTIFY_MSM_FB\n");
+	  //msmfb_resume(&msm_fb->early_suspend);
+	  break;
 	case NOTIFY_POWER:
-		/* nothing to do */
-		break;
+	  /* nothing to do */
+	  break;
 	default:
-		printk(KERN_ERR "%s: unknown action in 0x%lx\n",
-				__func__, action);
-		return NOTIFY_BAD;
+	  printk(KERN_ERR "%s: unknown action in 0x%lx\n",
+	      __func__, action);
+	  return NOTIFY_BAD;
 	}
 	return NOTIFY_OK;
-}                                                                                
+}
 
-/* -------------------------------------------------------------------------- */ 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 /* turn off the panel */
 static void msmfb_earlier_suspend(struct early_suspend *h)
@@ -540,11 +560,11 @@ static void msmfb_suspend(struct early_suspend *h)
 static void msmfb_resume_handler(struct early_suspend *h)
 {
 	struct msmfb_info *msmfb = container_of(h, struct msmfb_info,
-					early_suspend);
+	        early_suspend);
 #ifdef CONFIG_HTC_ONMODE_CHARGING
 	if (msmfb->fb_resumed == 1) {
-		DLOG(SUSPEND_RESUME, "fb is resumed by onchg. skip resume\n");
-		return;
+	  DLOG(SUSPEND_RESUME, "fb is resumed by onchg. skip resume\n");
+	  return;
 	}
 #endif
 	queue_work(msmfb->resume_workqueue, &msmfb->msmfb_resume_work);
@@ -555,7 +575,8 @@ static void msmfb_resume_handler(struct early_suspend *h)
 static void msmfb_onchg_earlier_suspend(struct early_suspend *h)
 {
 	struct msmfb_info *msmfb = container_of(h, struct msmfb_info,
-						onchg_earlier_suspend);
+	          onchg_earlier_suspend);
+
 	struct msm_panel_data *panel = msmfb->panel;
 	unsigned long irq_flags=0;
 
@@ -564,14 +585,16 @@ static void msmfb_onchg_earlier_suspend(struct early_suspend *h)
 	wake_up(&msmfb->frame_wq);
 	spin_lock_irqsave(&msmfb->update_lock, irq_flags);
 	spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
-	wait_event_timeout(msmfb->frame_wq,
-			   msmfb->frame_requested == msmfb->frame_done, HZ/10);
+
 #ifndef CONFIG_MSM_MDP40
 	mdp->dma(mdp, virt_to_phys(msmfb->black), 0,
 		 msmfb->fb->var.xres, msmfb->fb->var.yres, 0, 0,
 		 NULL, panel->interface_type);
 	mdp->dma_wait(mdp, panel->interface_type);
 #endif
+	wait_event_timeout(msmfb->frame_wq,
+	       msmfb->frame_requested == msmfb->frame_done, HZ/10);
+
 	/* turn off the panel */
 	panel->blank(panel);
 }
@@ -632,7 +655,7 @@ static void msmfb_resume(struct work_struct *work)
 
 static int msmfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	u32 size;
+	uint32_t size;
 
 	if ((var->xres != info->var.xres) ||
 	    (var->yres != info->var.yres) ||
@@ -954,7 +977,7 @@ static struct file_operations debug_fops = {
 };
 #endif
 
-#define BITS_PER_PIXEL_DEF 16
+#define BITS_PER_PIXEL_DEF 32
 
 static void setup_fb_info(struct msmfb_info *msmfb)
 {
@@ -980,6 +1003,7 @@ static void setup_fb_info(struct msmfb_info *msmfb)
 	fb_info->var.yres_virtual = msmfb->yres * 2;
 	fb_info->var.bits_per_pixel = BITS_PER_PIXEL_DEF;
 	fb_info->var.accel_flags = 0;
+	fb_info->var.reserved[4] = 60;
 
 	fb_info->var.yoffset = 0;
 
@@ -1102,7 +1126,7 @@ static int msmfb_probe(struct platform_device *pdev)
 	spin_lock_init(&msmfb->update_lock);
 	mutex_init(&msmfb->panel_init_lock);
 	init_waitqueue_head(&msmfb->frame_wq);
-	msmfb->resume_workqueue = alloc_workqueue("panel_on", WQ_HIGHPRI, 0);
+	msmfb->resume_workqueue = create_workqueue("panel_on");
 	if (msmfb->resume_workqueue == NULL) {
 		printk(KERN_ERR "failed to create panel_on workqueue\n");
 		ret = -ENOMEM;
