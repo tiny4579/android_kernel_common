@@ -30,8 +30,16 @@
 #ifndef _ARCH_ARM_MACH_MSM_SOCINFO_H_
 #define _ARCH_ARM_MACH_MSM_SOCINFO_H_
 
+<<<<<<< HEAD
 #include <linux/init.h>
 
+=======
+#include <linux/kernel.h>
+#include <linux/init.h>
+
+#include <asm/cputype.h>
+#include <asm/mach-types.h>
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 /*
  * SOC version type with major number in the upper 16 bits and minor
  * number in the lower 16 bits.  For example:
@@ -53,6 +61,16 @@ enum msm_cpu {
 	MSM_CPU_8X60,
 	MSM_CPU_8960,
 	MSM_CPU_7X27A,
+<<<<<<< HEAD
+=======
+	FSM_CPU_9XXX,
+	MSM_CPU_7X25A,
+	MSM_CPU_7X25AA,
+	MSM_CPU_8064,
+	MSM_CPU_8X30,
+	MSM_CPU_7X27AA,
+	MSM_CPU_9615,
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 };
 
 enum msm_cpu socinfo_get_msm_cpu(void);
@@ -63,65 +81,178 @@ uint32_t socinfo_get_platform_type(void);
 uint32_t socinfo_get_platform_subtype(void);
 uint32_t socinfo_get_platform_version(void);
 int __init socinfo_init(void) __must_check;
+<<<<<<< HEAD
 
 static inline int cpu_is_msm7x01(void)
 {
+=======
+const int read_msm_cpu_type(void);
+const int get_core_count(void);
+const int cpu_is_krait_v1(void);
+
+static inline int cpu_is_msm7x01(void)
+{
+#ifdef CONFIG_ARCH_MSM7X01A
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_7X01;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_msm7x25(void)
 {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ARCH_MSM7X25
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_7X25;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_msm7x27(void)
 {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ARCH_MSM7X27
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_7X27;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_msm7x27a(void)
 {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ARCH_MSM7X27A
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_7X27A;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm7x27aa(void)
+{
+#ifdef CONFIG_ARCH_MSM7X27A
+	enum msm_cpu cpu = socinfo_get_msm_cpu();
+
+	BUG_ON(cpu == MSM_CPU_UNKNOWN);
+	return cpu == MSM_CPU_7X27AA;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm7x25a(void)
+{
+#ifdef CONFIG_ARCH_MSM7X27A
+	enum msm_cpu cpu = socinfo_get_msm_cpu();
+
+	BUG_ON(cpu == MSM_CPU_UNKNOWN);
+	return cpu == MSM_CPU_7X25A;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm7x25aa(void)
+{
+#ifdef CONFIG_ARCH_MSM7X27A
+	enum msm_cpu cpu = socinfo_get_msm_cpu();
+
+	BUG_ON(cpu == MSM_CPU_UNKNOWN);
+	return cpu == MSM_CPU_7X25AA;
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_msm7x30(void)
 {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ARCH_MSM7X30
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_7X30;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_qsd8x50(void)
 {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ARCH_QSD8X50
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_8X50;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_msm8x55(void)
 {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_ARCH_MSM7X30
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_8X55;
+<<<<<<< HEAD
+=======
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 
 static inline int cpu_is_msm8x60(void)
 {
+<<<<<<< HEAD
 	enum msm_cpu cpu = socinfo_get_msm_cpu();
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
@@ -134,5 +265,59 @@ static inline int cpu_is_msm8960(void)
 
 	BUG_ON(cpu == MSM_CPU_UNKNOWN);
 	return cpu == MSM_CPU_8960;
+=======
+#ifdef CONFIG_ARCH_MSM8X60
+	return read_msm_cpu_type() == MSM_CPU_8X60;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm8960(void)
+{
+#ifdef CONFIG_ARCH_MSM8960
+	return read_msm_cpu_type() == MSM_CPU_8960;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_apq8064(void)
+{
+#ifdef CONFIG_ARCH_APQ8064
+	return read_msm_cpu_type() == MSM_CPU_8064;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm8x30(void)
+{
+	return read_msm_cpu_type() == MSM_CPU_8X30;
+}
+
+static inline int cpu_is_fsm9xxx(void)
+{
+#ifdef CONFIG_ARCH_FSM9XXX
+	enum msm_cpu cpu = socinfo_get_msm_cpu();
+
+	BUG_ON(cpu == MSM_CPU_UNKNOWN);
+	return cpu == FSM_CPU_9XXX;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm9615(void)
+{
+#ifdef CONFIG_ARCH_MSM9615
+	enum msm_cpu cpu = socinfo_get_msm_cpu();
+
+	BUG_ON(cpu == MSM_CPU_UNKNOWN);
+	return cpu == MSM_CPU_9615;
+#else
+	return 0;
+#endif
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 }
 #endif

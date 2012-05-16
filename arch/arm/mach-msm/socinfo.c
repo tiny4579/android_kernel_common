@@ -31,6 +31,11 @@ enum {
 	HW_PLATFORM_FLUID   = 3,
 	HW_PLATFORM_SVLTE_FFA	= 4,
 	HW_PLATFORM_SVLTE_SURF	= 5,
+<<<<<<< HEAD
+=======
+	/* Dragonboard platform id is assigned as 10 in CDT */
+	HW_PLATFORM_DRAGON	= 10,
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	HW_PLATFORM_INVALID
 };
 
@@ -40,7 +45,12 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_FFA] = "FFA",
 	[HW_PLATFORM_FLUID] = "Fluid",
 	[HW_PLATFORM_SVLTE_FFA] = "SVLTE_FFA",
+<<<<<<< HEAD
 	[HW_PLATFORM_SVLTE_SURF] = "SLVTE_SURF"
+=======
+	[HW_PLATFORM_SVLTE_SURF] = "SLVTE_SURF",
+	[HW_PLATFORM_DRAGON] = "Dragon"
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 };
 
 enum {
@@ -182,10 +192,43 @@ static enum msm_cpu cpu_of_id[] = {
 	/* 8960 IDs */
 	[87] = MSM_CPU_8960,
 
+<<<<<<< HEAD
+=======
+	/* 7x25A IDs */
+	[88] = MSM_CPU_7X25A,
+	[89] = MSM_CPU_7X25A,
+	[96] = MSM_CPU_7X25A,
+
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	/* 7x27A IDs */
 	[90] = MSM_CPU_7X27A,
 	[91] = MSM_CPU_7X27A,
 	[92] = MSM_CPU_7X27A,
+<<<<<<< HEAD
+=======
+	[97] = MSM_CPU_7X27A,
+
+	/* FSM9xxx ID */
+	[94] = FSM_CPU_9XXX,
+	[95] = FSM_CPU_9XXX,
+
+	/*  7x25AA ID */
+	[98] = MSM_CPU_7X25AA,
+	[99] = MSM_CPU_7X25AA,
+	[100] = MSM_CPU_7X25AA,
+
+	/*  7x27AA ID */
+	[101] = MSM_CPU_7X27AA,
+	[102] = MSM_CPU_7X27AA,
+	[103] = MSM_CPU_7X27AA,
+
+	/* 9x15 ID */
+	[104] = MSM_CPU_9615,
+	[105] = MSM_CPU_9615,
+
+	/* 8064 IDs*/
+	[109] = MSM_CPU_8064,
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 
 	/* Uninitialized IDs are not known to run Linux.
 	   MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
@@ -546,9 +589,19 @@ arch_initcall(socinfo_init_sysdev);
 
 void *setup_dummy_socinfo(void)
 {
+<<<<<<< HEAD
 	if (machine_is_msm8960_rumi3() || machine_is_msm8960_sim())/* ||
 	    machine_is_msm8960_cdp())*/
 		dummy_socinfo.id = 87;
+=======
+	if (machine_is_msm8960_rumi3() || machine_is_msm8960_sim() ||
+	    machine_is_msm8960_cdp())
+		dummy_socinfo.id = 87;
+	else if (machine_is_apq8064_rumi3() || machine_is_apq8064_sim())
+		dummy_socinfo.id = 109;
+	else if (machine_is_msm9615_mtp() || machine_is_msm9615_cdp())
+		dummy_socinfo.id = 104;
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
 	return (void *) &dummy_socinfo;
 }
 
@@ -653,3 +706,63 @@ int __init socinfo_init(void)
 
 	return 0;
 }
+<<<<<<< HEAD
+=======
+
+const int get_core_count(void)
+{
+	if (!(read_cpuid_mpidr() & BIT(31)))
+		return 1;
+
+	if (read_cpuid_mpidr() & BIT(30) &&
+		!machine_is_msm8960_sim() &&
+		!machine_is_apq8064_sim())
+		return 1;
+
+	/* 1 + the PART[1:0] field of MIDR */
+	return ((read_cpuid_id() >> 4) & 3) + 1;
+}
+
+const int read_msm_cpu_type(void)
+{
+	if (machine_is_msm8960_sim())
+		return MSM_CPU_8960;
+
+	switch (read_cpuid_id()) {
+	case 0x510F02D0:
+	case 0x510F02D2:
+	case 0x510F02D4:
+		return MSM_CPU_8X60;
+
+	case 0x510F04D0:
+	case 0x510F04D1:
+	case 0x510F04D2:
+		return MSM_CPU_8960;
+
+	case 0x511F04D0:
+		if (get_core_count() == 2)
+			return MSM_CPU_8960;
+		else
+			return MSM_CPU_8X30;
+
+	case 0x510F06F0:
+		return MSM_CPU_8064;
+
+	default:
+		return MSM_CPU_UNKNOWN;
+	};
+}
+
+const int cpu_is_krait_v1(void)
+{
+	switch (read_cpuid_id()) {
+	case 0x510F04D0:
+	case 0x510F04D1:
+	case 0x510F04D2:
+		return 1;
+
+	default:
+		return 0;
+	};
+}
+>>>>>>> dc2265d... msm: socinfo that now works / add init to boards
