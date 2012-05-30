@@ -366,7 +366,6 @@ adreno_getchipid(struct kgsl_device *device)
 	unsigned int coreid, majorid, minorid, patchid, revid;
 	uint32_t soc_platform_version = socinfo_get_version();
 
-	/* YDX */
 	adreno_regread(device, REG_RBBM_PERIPHID1, &coreid);
 	adreno_regread(device, REG_RBBM_PERIPHID2, &majorid);
 	adreno_regread(device, REG_RBBM_PATCH_RELEASE, &revid);
@@ -382,10 +381,6 @@ adreno_getchipid(struct kgsl_device *device)
 
 	chipid |= ((majorid >> 4) & 0xF) << 16;
 
-	adreno_regread(device, REG_RBBM_PATCH_RELEASE, &revid);
-	/* this is a 16bit field, but extremely unlikely it would ever get
-	* this high
-	*/
 	minorid = ((revid >> 0)  & 0xFF);
 
 	patchid = ((revid >> 16) & 0xFF);
@@ -398,8 +393,10 @@ adreno_getchipid(struct kgsl_device *device)
 			SOCINFO_VERSION_MAJOR(soc_platform_version) == 3)
 		patchid = 6;
 
-	chipid  = ((coreid << 24) | (majorid << 16) |
-			(minorid << 8) | (patchid << 0));
+	chipid |= (minorid << 8) | patchid;
+
+	return chipid;
+}
 
 static inline bool _rev_match(unsigned int id, unsigned int entry)
 {
@@ -799,7 +796,7 @@ static int adreno_getproperty(struct kgsl_device *device,
 
 			memset(&devinfo, 0, sizeof(devinfo));
 			devinfo.device_id = device->id+1;
-			devinfo.chip_id = device->chip_id;
+			devinfo.chip_id = adreno_dev->chip_id;
 			devinfo.mmu_enabled = kgsl_mmu_enabled();
 			devinfo.gpu_id = adreno_dev->gpurev;
 			devinfo.gmem_gpubaseaddr = adreno_dev->gmemspace.

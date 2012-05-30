@@ -168,7 +168,6 @@ static int adreno_ringbuffer_load_pm4_ucode(struct kgsl_device *device)
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	int i, ret = 0;
 
-
 	if (adreno_dev->pm4_fw == NULL) {
 		int len;
 		void *ptr;
