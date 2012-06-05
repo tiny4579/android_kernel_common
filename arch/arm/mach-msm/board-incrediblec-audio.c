@@ -353,7 +353,7 @@ void __init incrediblec_audio_init(void)
 	mutex_init(&bt_sco_lock);
 	q6audio_register_analog_ops(&ops);
 	acoustic_register_ops(&acoustic);
-	aboost = 1;
+	aboost = 0;
 }
 
 module_init(aboost_init);
