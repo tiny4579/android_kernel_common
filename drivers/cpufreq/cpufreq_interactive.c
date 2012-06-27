@@ -370,6 +370,9 @@ static void cpufreq_interactive_idle_end(void)
 	struct cpufreq_interactive_cpuinfo *pcpu =
 		&per_cpu(cpuinfo, smp_processor_id());
 
+	if (!pcpu->governor_enabled)
+		return;
+
 	pcpu->idling = 0;
 	smp_wmb();
 
@@ -822,6 +825,26 @@ static struct attribute_group interactive_attr_group = {
 	.name = "interactive",
 };
 
+static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
+					     unsigned long val,
+					     void *data)
+{
+	switch (val) {
+	case IDLE_START:
+		cpufreq_interactive_idle_start();
+		break;
+	case IDLE_END:
+		cpufreq_interactive_idle_end();
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block cpufreq_interactive_idle_nb = {
+	.notifier_call = cpufreq_interactive_idle_notifier,
+};
+
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		unsigned int event)
 {
@@ -875,6 +898,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			pr_warn("%s: failed to register input handler\n",
 				__func__);
 
+		idle_notifier_register(&cpufreq_interactive_idle_nb);
 		break;
 
 	case CPUFREQ_GOV_STOP:
@@ -897,6 +921,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		if (atomic_dec_return(&active_count) > 0)
 			return 0;
 
+		idle_notifier_unregister(&cpufreq_interactive_idle_nb);
 		input_unregister_handler(&cpufreq_interactive_input_handler);
 		sysfs_remove_group(cpufreq_global_kobject,
 				&interactive_attr_group);
@@ -914,26 +939,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 	}
 	return 0;
 }
-
-static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
-					     unsigned long val,
-					     void *data)
-{
-	switch (val) {
-	case IDLE_START:
-		cpufreq_interactive_idle_start();
-		break;
-	case IDLE_END:
-		cpufreq_interactive_idle_end();
-		break;
-	}
-
-	return 0;
-}
-
-static struct notifier_block cpufreq_interactive_idle_nb = {
-	.notifier_call = cpufreq_interactive_idle_notifier,
-};
 
 static int __init cpufreq_interactive_init(void)
 {
@@ -978,7 +983,6 @@ static int __init cpufreq_interactive_init(void)
 	spin_lock_init(&down_cpumask_lock);
 	mutex_init(&set_speed_lock);
 
-	idle_notifier_register(&cpufreq_interactive_idle_nb);
 	INIT_WORK(&inputopen.inputopen_work, cpufreq_interactive_input_open);
 	return cpufreq_register_governor(&cpufreq_gov_interactive);
 
