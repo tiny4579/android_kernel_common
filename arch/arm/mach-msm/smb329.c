@@ -28,6 +28,11 @@ static const unsigned short normal_i2c[] = { I2C_CLIENT_END };
 int fast_charge_usb;
 
 /**
+ * 0 is no charger, 1 is USB charger, 2 is wall charger.
+ */
+int charger_active=0;
+
+/**
  * Insmod parameters
  */
 I2C_CLIENT_INSMOD_1(smb329);
@@ -174,42 +179,42 @@ static int smb329_i2c_read_byte(u8 *value, u8 reg)
 	return result;
 }
 
-int set_charger_ctrl(u32 ctl)
+void smb329_charger_enable(int fast_charge)
 {
-	int result = 0;
-    u8 version;
+	u8 version;
 
-	switch (ctl) {
-	case DISABLE:
-		pr_info("Switch charger OFF\n");
-		break;
-	case ENABLE_SLOW_CHG:
-			if (fast_charge_usb == 0) {
-				pr_info("Switch charger ON (SLOW)\n");
-				smb329_i2c_write_byte(0x88, 0x31);
-				smb329_i2c_write_byte(0x08, 0x05);
-			}
-			else {
-				pr_info("Switch charger ON (FAST)\n");
-				printk(KERN_INFO "fast charge enabled\n");
-				smb329_i2c_write_byte(0x84, 0x31);
-				smb329_i2c_write_byte(0xD0, 0x01);
-				smb329_i2c_write_byte(0x08, 0x05);
-				smb329_i2c_read_byte(&version, 0x3B);
-				pr_info("Switch charger version%x\n", version);
-				if ((version & 0x18) == 0x0)
-					smb329_i2c_write_byte(0xA9, 0x00);
-			}
-		break;
-	case ENABLE_FAST_CHG:
+	if(fast_charge == 0) {
+		pr_info("Switch charger ON (SLOW)\n");
+		smb329_i2c_write_byte(0x88, 0x31);
+		smb329_i2c_write_byte(0x08, 0x05);
+	} else {
 		pr_info("Switch charger ON (FAST)\n");
 		smb329_i2c_write_byte(0x84, 0x31);
 		smb329_i2c_write_byte(0xD0, 0x01);
 		smb329_i2c_write_byte(0x08, 0x05);
 		smb329_i2c_read_byte(&version, 0x3B);
-		pr_info("Switch charger version%x\n", version);
+		pr_info("Switch charger version %x\n", version);
 		if ((version & 0x18) == 0x0)
 			smb329_i2c_write_byte(0xA9, 0x00);
+	}
+}
+
+int set_charger_ctrl(u32 ctl)
+{
+	int result = 0;
+
+	switch (ctl) {
+	case DISABLE:
+		charger_active=0;
+		pr_info("Switch charger OFF\n");
+		break;
+	case ENABLE_SLOW_CHG:
+		charger_active=1;
+		smb329_charger_enable(fast_charge_usb);
+		break;
+	case ENABLE_FAST_CHG:
+		charger_active=2;
+		smb329_charger_enable(1);
 		break;
 	default:
 		pr_info("%s: Not supported battery ctr called.!", __func__);
@@ -224,7 +229,7 @@ static int cable_status_handler_func(struct notifier_block *nfb,
 		unsigned long action, void *param)
 {
 	u32 ctl = (u32)action;
-	pr_info("Switch charger set control%d\n", ctl);
+	pr_info("Switch charger set control %d\n", ctl);
 	set_charger_ctrl(ctl);
 
 	return NOTIFY_OK;
@@ -295,6 +300,11 @@ static ssize_t fast_charge_usb_show(struct kobject *kobj, struct kobj_attribute 
 static ssize_t fast_charge_usb_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%du", &fast_charge_usb);
+	
+	/* If USB charger is active, apply the new setting immediately. */
+	if(charger_active == 1){
+		smb329_charger_enable(fast_charge_usb);
+	}
 	return count;
 }
 
