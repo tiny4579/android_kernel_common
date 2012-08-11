@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Sat Aug 11 18:25:36 2012
+# Sat Aug 11 18:50:49 2012
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -33,7 +33,7 @@ CONFIG_EXPERIMENTAL=y
 CONFIG_BROKEN_ON_SMP=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 CONFIG_CROSS_COMPILE="arm-eabi-"
-CONFIG_LOCALVERSION="-evervolv-dives-jellybean"
+CONFIG_LOCALVERSION="-incredikernel-jb"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_HAVE_KERNEL_GZIP=y
 CONFIG_HAVE_KERNEL_LZMA=y
