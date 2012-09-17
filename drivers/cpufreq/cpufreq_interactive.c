@@ -67,10 +67,11 @@ static spinlock_t down_cpumask_lock;
 static struct mutex set_speed_lock;
 
 /* Hi speed to bump to from lo speed when load burst (default max) */
+#define DEFAULT_HISPEED_FREQ 768000
 static u64 hispeed_freq;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 85
+#define DEFAULT_GO_HISPEED_LOAD 50
 static unsigned long go_hispeed_load;
 
 /*
@@ -96,6 +97,8 @@ static unsigned long above_hispeed_delay_val;
  * Boost pulse to hispeed on touchscreen input.
  */
 
+/* Enable input boost by default. */
+#define DEFAULT_INPUT_BOOST 1
 static int input_boost_val;
 
 struct cpufreq_interactive_inputopen {
@@ -937,10 +940,12 @@ static int __init cpufreq_interactive_init(void)
 	struct cpufreq_interactive_cpuinfo *pcpu;
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 
+	hispeed_freq = DEFAULT_HISPEED_FREQ;
 	go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 	min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 	above_hispeed_delay_val = DEFAULT_ABOVE_HISPEED_DELAY;
 	timer_rate = DEFAULT_TIMER_RATE;
+	input_boost_val = DEFAULT_INPUT_BOOST;
 
 	/* Initalize per-cpu timers */
 	for_each_possible_cpu(i) {
