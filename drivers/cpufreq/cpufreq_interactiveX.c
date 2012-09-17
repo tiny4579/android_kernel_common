@@ -69,7 +69,7 @@ static unsigned int resume_speed = 998400; // modified by tiny for 1Ghz CPU from
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVEX
 static
 #endif
 struct cpufreq_governor cpufreq_gov_interactive = {
