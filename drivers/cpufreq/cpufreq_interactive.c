@@ -67,7 +67,7 @@ static spinlock_t down_cpumask_lock;
 static struct mutex set_speed_lock;
 
 /* Hi speed to bump to from lo speed when load burst (default max) */
-#define DEFAULT_HISPEED_FREQ 768000
+#define DEFAULT_HISPEED_FREQ 614400
 static u64 hispeed_freq;
 
 /* Go to hi speed when CPU load at or above this value. */
