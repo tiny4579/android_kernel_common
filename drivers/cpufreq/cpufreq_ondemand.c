@@ -39,7 +39,6 @@
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
-#define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
 #define DEFAULT_FREQ_BOOST_TIME			(500000)
 #define MAX_FREQ_BOOST_TIME				(5000000)
 
@@ -272,95 +271,8 @@ show_one(sampling_down_factor, sampling_down_factor);
 show_one(ignore_nice_load, ignore_nice);
 show_one(powersave_bias, powersave_bias);
 show_one(boostpulse, boosted);
+show_one(boosttime, freq_boost_time);
 show_one(boostfreq, boostfreq);
-
-/**
- * update_sampling_rate - update sampling rate effective immediately if needed.
- * @new_rate: new sampling rate
- *
- * If new rate is smaller than the old, simply updaing
- * dbs_tuners_int.sampling_rate might not be appropriate. For example,
- * if the original sampling_rate was 1 second and the requested new sampling
- * rate is 10 ms because the user needs immediate reaction from ondemand
- * governor, but not sure if higher frequency will be required or not,
- * then, the governor may change the sampling rate too late; up to 1 second
- * later. Thus, if we are reducing the sampling rate, we need to make the
- * new value effective immediately.
- */
-static void update_sampling_rate(unsigned int new_rate)
-{
-	int cpu;
-
-	dbs_tuners_ins.sampling_rate = new_rate
-				     = max(new_rate, min_sampling_rate);
-
-	for_each_online_cpu(cpu) {
-		struct cpufreq_policy *policy;
-		struct cpu_dbs_info_s *dbs_info;
-		unsigned long next_sampling, appointed_at;
-
-		policy = cpufreq_cpu_get(cpu);
-		if (!policy)
-			continue;
-		dbs_info = &per_cpu(od_cpu_dbs_info, policy->cpu);
-		cpufreq_cpu_put(policy);
-
-		mutex_lock(&dbs_info->timer_mutex);
-
-		if (!delayed_work_pending(&dbs_info->work)) {
-			mutex_unlock(&dbs_info->timer_mutex);
-			continue;
-		}
-
-		next_sampling  = jiffies + usecs_to_jiffies(new_rate);
-		appointed_at = dbs_info->work.timer.expires;
-
-
-		if (time_before(next_sampling, appointed_at)) {
-
-			mutex_unlock(&dbs_info->timer_mutex);
-			cancel_delayed_work_sync(&dbs_info->work);
-			mutex_lock(&dbs_info->timer_mutex);
-
-			schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work,
-						 usecs_to_jiffies(new_rate));
-
-		}
-		mutex_unlock(&dbs_info->timer_mutex);
-	}
-}
-
-static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
-				const char *buf, size_t count)
-{
-	int ret;
-	unsigned int input;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret < 0)
-		return ret;
-
-	if (input > 1 && input <= MAX_FREQ_BOOST_TIME)
-		dbs_tuners_ins.freq_boost_time = input;
-	else
-		dbs_tuners_ins.freq_boost_time = DEFAULT_FREQ_BOOST_TIME;
-
-	dbs_tuners_ins.boosted = 1;
-	freq_boosted_time = ktime_to_us(ktime_get());
-	return count;
-}
-
-static ssize_t store_boostfreq(struct kobject *a, struct attribute *b,
-				   const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-	dbs_tuners_ins.boostfreq = input;
-	return count;
-}
 
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
@@ -490,6 +402,39 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+
+static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned int input;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret < 0)
+		return ret;
+
+	if (input > 1 && input <= MAX_FREQ_BOOST_TIME)
+		dbs_tuners_ins.freq_boost_time = input;
+	else
+		dbs_tuners_ins.freq_boost_time = DEFAULT_FREQ_BOOST_TIME;
+
+	dbs_tuners_ins.boosted = 1;
+	freq_boosted_time = ktime_to_us(ktime_get());
+	return count;
+}
+
+static ssize_t store_boostfreq(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+	dbs_tuners_ins.boostfreq = input;
+	return count;
+}
+
 define_one_global_rw(sampling_rate);
 define_one_global_rw(io_is_busy);
 define_one_global_rw(up_threshold);
@@ -543,6 +488,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	struct cpufreq_policy *policy;
 	unsigned int j;
+	unsigned int boostfreq;
 
 	this_dbs_info->freq_lo = 0;
 	policy = this_dbs_info->cur_policy;
@@ -553,6 +499,10 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			dbs_tuners_ins.boosted = 0;
 		}
 	}
+	if (dbs_tuners_ins.boostfreq != 0)
+		boostfreq = dbs_tuners_ins.boostfreq;
+	else
+		boostfreq = policy->max;
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
 	 * than 20% (default), then we try to increase frequency
@@ -658,8 +608,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* check for frequency boost */
-	if (dbs_tuners_ins.boosted && policy->cur < dbs_tuners_ins.boostfreq) {
-		dbs_freq_increase(policy, dbs_tuners_ins.boostfreq);
+	if (dbs_tuners_ins.boosted && policy->cur < boostfreq) {
+		dbs_freq_increase(policy, boostfreq);
+		dbs_tuners_ins.boostfreq = policy->cur;
 		return;
 	}
 
@@ -682,8 +633,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 				 dbs_tuners_ins.down_differential);
 
 		if (dbs_tuners_ins.boosted &&
-				freq_next < dbs_tuners_ins.boostfreq) {
-			freq_next = dbs_tuners_ins.boostfreq;
+				freq_next < boostfreq) {
+			freq_next = boostfreq;
 		}
 		/* No longer fully busy, reset rate_mult */
 		this_dbs_info->rate_mult = 1;
