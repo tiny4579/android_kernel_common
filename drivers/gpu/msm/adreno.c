@@ -1407,7 +1407,7 @@ static long adreno_ioctl(struct kgsl_device_private *dev_priv,
 
 static inline s64 adreno_ticks_to_us(u32 ticks, u32 gpu_freq)
 {
-	gpu_freq /= 1000000;
+	gpu_freq /= 2000000;
 	return ticks / gpu_freq;
 }
 
