@@ -1846,6 +1846,8 @@ static int ext4_journalled_write_end(struct file *file,
 	from = pos & (PAGE_CACHE_SIZE - 1);
 	to = from + len;
 
+	BUG_ON(!ext4_handle_valid(handle));
+
 	if (copied < len) {
 		if (!PageUptodate(page))
 			copied = 0;
@@ -2658,6 +2660,8 @@ static int __ext4_journalled_writepage(struct page *page,
 		ret = PTR_ERR(handle);
 		goto out;
 	}
+
+	BUG_ON(!ext4_handle_valid(handle));
 
 	ret = walk_page_buffers(handle, page_bufs, 0, len, NULL,
 				do_journal_get_write_access);
