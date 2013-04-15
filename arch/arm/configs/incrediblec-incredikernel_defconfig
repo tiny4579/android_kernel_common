@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Mon Dec 17 05:15:48 2012
+# Sun Apr 14 20:27:45 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -2127,6 +2127,7 @@ CONFIG_NLS_ISO8859_1=y
 # CONFIG_NLS_KOI8_R is not set
 # CONFIG_NLS_KOI8_U is not set
 # CONFIG_NLS_UTF8 is not set
+CONFIG_DYNAMIC_FSYNC=y
 
 #
 # Kernel hacking
