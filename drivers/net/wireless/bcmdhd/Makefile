@@ -35,4 +35,5 @@ endif
 EXTRA_CFLAGS = $(DHDCFLAGS)
 ifeq ($(CONFIG_BCMDHD),m)
 EXTRA_LDFLAGS += --strip-debug
+EXTRA_CFLAGS += -fno-pic
 endif
