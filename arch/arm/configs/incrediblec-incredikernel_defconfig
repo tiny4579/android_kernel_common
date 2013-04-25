@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Thu Oct 11 21:50:34 2012
+# Wed Apr 24 20:29:23 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -33,7 +33,7 @@ CONFIG_EXPERIMENTAL=y
 CONFIG_BROKEN_ON_SMP=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 CONFIG_CROSS_COMPILE="arm-eabi-"
-CONFIG_LOCALVERSION="-incredikernel-jb"
+CONFIG_LOCALVERSION="-incredikernel-ics-sense"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_HAVE_KERNEL_GZIP=y
 CONFIG_HAVE_KERNEL_LZMA=y
@@ -1135,8 +1135,8 @@ CONFIG_WLAN=y
 # CONFIG_USB_NET_RNDIS_WLAN is not set
 # CONFIG_ATH_COMMON is not set
 # CONFIG_BCM4329 is not set
-CONFIG_BCMDHD=y
-CONFIG_BCMDHD_FW_PATH="/vendor/firmware/fw_bcmdhd.bin"
+CONFIG_BCMDHD=m
+CONFIG_BCMDHD_FW_PATH="/system/etc/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/proc/calibration"
 # CONFIG_DHD_USE_STATIC_BUF is not set
 # CONFIG_DHD_USE_SCHED_SCAN is not set
