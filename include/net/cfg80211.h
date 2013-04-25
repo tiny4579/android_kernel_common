@@ -1443,6 +1443,10 @@ struct cfg80211_ops {
  *	hints read the documenation for regulatory_hint_found_beacon()
  * @WIPHY_FLAG_NETNS_OK: if not set, do not allow changing the netns of this
  *	wiphy at all
+ * @WIPHY_FLAG_ENFORCE_COMBINATIONS: Set this flag to enforce interface
+ *	combinations for this device. This flag is used for backward
+ *	compatibility only until all drivers advertise combinations and
+ *	they will always be enforced.
  * @WIPHY_FLAG_PS_ON_BY_DEFAULT: if set to true, powersave will be enabled
  *	by default -- this flag will be set depending on the kernel's default
  *	on wiphy_new(), but can be changed by the driver if it has a good
@@ -1456,6 +1460,22 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_IBSS_RSN: The device supports IBSS RSN.
  * @WIPHY_FLAG_SUPPORTS_SEPARATE_DEFAULT_KEYS: The device supports separate
  *	unicast and multicast TX keys.
+ * @WIPHY_FLAG_MESH_AUTH: The device supports mesh authentication by routing
+ *	auth frames to userspace. See @NL80211_MESH_SETUP_USERSPACE_AUTH.
+ * @WIPHY_FLAG_SUPPORTS_SCHED_SCAN: The device supports scheduled scans.
+ * @WIPHY_FLAG_SUPPORTS_FW_ROAM: The device supports roaming feature in the
+ *	firmware.
+ * @WIPHY_FLAG_AP_UAPSD: The device supports uapsd on AP.
+ * @WIPHY_FLAG_SUPPORTS_TDLS: The device supports TDLS (802.11z) operation.
+ * @WIPHY_FLAG_TDLS_EXTERNAL_SETUP: The device does not handle TDLS (802.11z)
+ *	link setup/discovery operations internally. Setup, discovery and
+ *	teardown packets should be sent through the @NL80211_CMD_TDLS_MGMT
+ *	command. When this flag is not set, @NL80211_CMD_TDLS_OPER should be
+ *	used for asking the driver/firmware to perform a TDLS operation.
+ * @WIPHY_FLAG_HAVE_AP_SME: device integrates AP SME
+ * @WIPHY_FLAG_REPORTS_OBSS: the device will report beacons from other BSSes
+ *	when there are virtual interfaces in AP mode by calling
+ *	cfg80211_report_obss_beacon().
  */
 enum wiphy_flags {
 	WIPHY_FLAG_CUSTOM_REGULATORY		= BIT(0),
@@ -1468,6 +1488,15 @@ enum wiphy_flags {
 	WIPHY_FLAG_CONTROL_PORT_PROTOCOL	= BIT(7),
 	WIPHY_FLAG_IBSS_RSN			= BIT(8),
 	WIPHY_FLAG_SUPPORTS_SEPARATE_DEFAULT_KEYS= BIT(9),
+	WIPHY_FLAG_MESH_AUTH			= BIT(10),
+	WIPHY_FLAG_SUPPORTS_SCHED_SCAN		= BIT(11),
+	WIPHY_FLAG_ENFORCE_COMBINATIONS		= BIT(12),
+	WIPHY_FLAG_SUPPORTS_FW_ROAM		= BIT(13),
+	WIPHY_FLAG_AP_UAPSD			= BIT(14),
+	WIPHY_FLAG_SUPPORTS_TDLS		= BIT(15),
+	WIPHY_FLAG_TDLS_EXTERNAL_SETUP		= BIT(16),
+	WIPHY_FLAG_HAVE_AP_SME			= BIT(17),
+	WIPHY_FLAG_REPORTS_OBSS			= BIT(18),
 };
 
 struct mac_address {
