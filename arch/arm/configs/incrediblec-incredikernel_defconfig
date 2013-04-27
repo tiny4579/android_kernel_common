@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Sat Apr 27 15:19:13 2013
+# Sat Apr 27 15:27:32 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -947,7 +947,8 @@ CONFIG_EXTRA_FIRMWARE=""
 CONFIG_GENLOCK=y
 CONFIG_GENLOCK_MISCDEVICE=y
 CONFIG_SYNC=y
-# CONFIG_SW_SYNC is not set
+CONFIG_SW_SYNC=y
+# CONFIG_SW_SYNC_USER is not set
 # CONFIG_CONNECTOR is not set
 CONFIG_MTD=y
 # CONFIG_MTD_DEBUG is not set
