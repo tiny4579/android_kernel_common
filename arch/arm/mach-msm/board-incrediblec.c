@@ -1386,10 +1386,10 @@ static void __init incrediblec_init(void)
 	 msm_hw_reset_hook = incrediblec_reset;
 
 	if (0 == engineerid || 0xF == engineerid) {
-		mdp_pmem_pdata.start = MSM_PMEM_MDP_XA_BASE;
+		android_pmem_venc_pdata.start = MSM_PMEM_MDP_XA_BASE;
 		android_pmem_adsp_pdata.start = MSM_PMEM_ADSP_XA_BASE;
 	} else if (engineerid >= 3) {
-		mdp_pmem_pdata.start = MSM_PMEM_MDP_BASE + MSM_MEM_128MB_OFFSET;
+		android_pmem_venc_pdata.start = MSM_PMEM_MDP_BASE + MSM_MEM_128MB_OFFSET;
 		android_pmem_adsp_pdata.start = MSM_PMEM_ADSP_BASE + MSM_MEM_128MB_OFFSET;
 	}
 
