@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.8 Kernel Configuration
-# Thu Sep  5 21:46:34 2013
+# Thu Sep  5 21:51:07 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -947,6 +947,7 @@ CONFIG_EXTRA_FIRMWARE=""
 CONFIG_GENLOCK=y
 CONFIG_GENLOCK_MISCDEVICE=y
 CONFIG_SYNC=y
+# CONFIG_SW_SYNC is not set
 # CONFIG_CONNECTOR is not set
 CONFIG_MTD=y
 # CONFIG_MTD_DEBUG is not set
@@ -1525,7 +1526,8 @@ CONFIG_OV8810=y
 # Graphics support
 #
 # CONFIG_DRM is not set
-# CONFIG_ION is not set
+CONFIG_ION=y
+CONFIG_ION_MSM=y
 CONFIG_MSM_KGSL=y
 # CONFIG_MSM_KGSL_CFF_DUMP is not set
 # CONFIG_MSM_KGSL_PSTMRTMDMP_CP_STAT_NO_DETAIL is not set
